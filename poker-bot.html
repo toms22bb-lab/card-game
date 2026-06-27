@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Poker Decision Bot</title>
+  <style>
+    :root { color-scheme: dark; --bg:#07130d; --panel:#102018; --accent:#20d47b; --text:#f4fff8; --muted:#a9c8b6; --danger:#ff6868; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif; background: radial-gradient(circle at top left, #174f33, var(--bg) 45%); color: var(--text); display: grid; place-items: center; padding: 24px; }
+    main { width: min(980px, 100%); display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    .card { background: rgba(16, 32, 24, .9); border: 1px solid rgba(255,255,255,.12); border-radius: 24px; padding: 24px; box-shadow: 0 24px 80px rgba(0,0,0,.35); }
+    h1 { margin: 0 0 10px; font-size: clamp(2rem, 5vw, 4rem); line-height: .95; }
+    p { color: var(--muted); line-height: 1.6; }
+    label { display: block; margin: 16px 0 8px; color: var(--muted); font-weight: 700; }
+    input, select { width: 100%; border: 1px solid rgba(255,255,255,.18); border-radius: 14px; background: #07130d; color: var(--text); padding: 13px 14px; font: inherit; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    button { width: 100%; margin-top: 18px; border: 0; border-radius: 16px; background: linear-gradient(135deg, var(--accent), #7fffd4); color: #04200f; padding: 15px 18px; font-weight: 900; font-size: 1rem; cursor: pointer; }
+    .result { min-height: 290px; display: grid; align-content: center; gap: 14px; }
+    .action { font-size: clamp(2.4rem, 8vw, 5rem); font-weight: 950; text-transform: uppercase; color: var(--accent); line-height: .9; }
+    .pill-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill { border-radius: 999px; background: rgba(32, 212, 123, .12); border: 1px solid rgba(32, 212, 123, .35); color: #cffff0; padding: 8px 10px; font-weight: 700; }
+    .error { color: var(--danger); font-weight: 800; }
+    .hint { font-size: .92rem; }
+    @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Poker Decision Bot</h1>
+      <p>Type your two hole cards and the cards on the table. The bot evaluates your made hand, draws, pot odds, and suggests a simple decision.</p>
+      <form id="bot-form">
+        <label for="hero">Your cards</label>
+        <input id="hero" name="hero" value="As Ks" placeholder="As Ks" required>
+
+        <label for="board">Cards on the table</label>
+        <input id="board" name="board" value="Kh 7d 2c" placeholder="Kh 7d 2c">
+
+        <div class="row">
+          <div>
+            <label for="pot">Pot (BB)</label>
+            <input id="pot" name="pot" type="number" min="0" step="0.1" value="5.5">
+          </div>
+          <div>
+            <label for="call">To call (BB)</label>
+            <input id="call" name="call" type="number" min="0" step="0.1" value="0">
+          </div>
+        </div>
+
+        <button type="submit">Get best decision</button>
+      </form>
+      <p class="hint">Use rank+suit cards: A, K, Q, J, T, 9-2 plus c/d/h/s. Example: <strong>As</strong> is ace of spades.</p>
+    </section>
+
+    <section class="card result" id="result" aria-live="polite">
+      <div class="action">Ready</div>
+      <p>Enter a spot and press “Get best decision.”</p>
+    </section>
+  </main>
+
+  <script>
+    const rankValues = { 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, T:10, J:11, Q:12, K:13, A:14 };
+    const strengths = { high_card:1, pair:2, two_pair:3, trips:4, straight:5, flush:6, full_house:7, quads:8, straight_flush:9 };
+
+    function parseCards(value) {
+      if (!value) return [];
+      const compact = String(value).replace(/[\s,]+/g, '');
+      if (compact.length % 2 !== 0) throw new Error('Cards must be rank+suit pairs, like As Kh or AsKh.');
+      const cards = [];
+      for (let i = 0; i < compact.length; i += 2) {
+        const card = compact.slice(i, i + 2);
+        if (!/^[2-9TJQKA][cdhs]$/i.test(card)) throw new Error(`Invalid card: ${card}`);
+        cards.push(card[0].toUpperCase() + card[1].toLowerCase());
+      }
+      const unique = new Set(cards);
+      if (unique.size !== cards.length) throw new Error('Duplicate cards are not allowed.');
+      return cards;
+    }
+
+    function countBy(values) {
+      return values.reduce((map, value) => map.set(value, (map.get(value) || 0) + 1), new Map());
+    }
+
+    function findStraight(ranks) {
+      const unique = [...new Set(ranks)].sort((a, b) => a - b);
+      if (unique.includes(14)) unique.unshift(1);
+      let run = 1;
+      for (let i = 1; i < unique.length; i++) {
+        run = unique[i] === unique[i - 1] + 1 ? run + 1 : 1;
+        if (run >= 5) return true;
+      }
+      return false;
+    }
+
+    function straightDraw(ranks) {
+      const unique = new Set(ranks);
+      if (unique.has(14)) unique.add(1);
+      for (let low = 1; low <= 10; low++) {
+        const present = [low, low + 1, low + 2, low + 3, low + 4].filter(rank => unique.has(rank)).length;
+        if (present === 4) return true;
+      }
+      return false;
+    }
+
+    function evaluate(cards) {
+      const ranks = cards.map(card => rankValues[card[0]]);
+      const suits = cards.map(card => card[1]);
+      const rankCounts = [...countBy(ranks).values()].sort((a, b) => b - a);
+      const bySuit = countBy(suits);
+      const flush = [...bySuit.values()].some(count => count >= 5);
+      const straight = findStraight(ranks);
+      let category = 'high_card';
+      if (flush && straight) category = 'straight_flush';
+      else if (rankCounts[0] === 4) category = 'quads';
+      else if (rankCounts[0] === 3 && rankCounts[1] >= 2) category = 'full_house';
+      else if (flush) category = 'flush';
+      else if (straight) category = 'straight';
+      else if (rankCounts[0] === 3) category = 'trips';
+      else if (rankCounts[0] === 2 && rankCounts[1] === 2) category = 'two_pair';
+      else if (rankCounts[0] === 2) category = 'pair';
+      const flushDraw = [...bySuit.values()].some(count => count === 4);
+      const openEnder = straightDraw(ranks);
+      return { category, score: strengths[category], flushDraw, straightDraw: openEnder, comboDraw: flushDraw && openEnder };
+    }
+
+    function advise({ hero, board, pot, call }) {
+      const heroCards = parseCards(hero);
+      const boardCards = parseCards(board);
+      if (heroCards.length !== 2) throw new Error('Enter exactly two of your own cards.');
+      if (![0, 3, 4, 5].includes(boardCards.length)) throw new Error('The table must have 0, 3, 4, or 5 cards.');
+      const all = [...heroCards, ...boardCards];
+      if (new Set(all).size !== all.length) throw new Error('Your cards and table cards cannot overlap.');
+      const hand = evaluate(all);
+      const pressure = Number(call) > 0;
+      const potOdds = pressure && Number(pot) > 0 ? Number(call) / (Number(pot) + Number(call)) : 0;
+      let action = 'check';
+      let reason = 'Weak hand with no major draw; avoid investing more chips.';
+      if (hand.score >= strengths.flush) [action, reason] = ['raise', 'Very strong made hand; build the pot.'];
+      else if (hand.score >= strengths.two_pair) [action, reason] = [pressure ? 'raise' : 'bet', 'Strong made hand; value bet against worse hands and draws.'];
+      else if (hand.comboDraw) [action, reason] = [pressure && potOdds > .35 ? 'call' : 'bet', 'Combo draw can continue or semi-bluff.'];
+      else if (hand.score === strengths.pair) [action, reason] = [pressure && potOdds > .3 ? 'fold' : 'check', 'One pair is marginal without a strong draw.'];
+      else if (hand.flushDraw || hand.straightDraw) [action, reason] = [pressure && potOdds > .25 ? 'fold' : 'call', 'Drawing hand can continue when the price is reasonable.'];
+      else if (pressure) action = 'fold';
+      return { action, reason, ...hand };
+    }
+
+    function render(decision) {
+      document.getElementById('result').innerHTML = `
+        <div class="action">${decision.action}</div>
+        <p>${decision.reason}</p>
+        <div class="pill-list">
+          <span class="pill">Hand: ${decision.category.replace('_', ' ')}</span>
+          <span class="pill">Flush draw: ${decision.flushDraw ? 'yes' : 'no'}</span>
+          <span class="pill">Straight draw: ${decision.straightDraw ? 'yes' : 'no'}</span>
+        </div>`;
+    }
+
+    document.getElementById('bot-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const form = new FormData(event.currentTarget);
+      try {
+        render(advise({ hero: form.get('hero'), board: form.get('board'), pot: form.get('pot'), call: form.get('call') }));
+      } catch (error) {
+        document.getElementById('result').innerHTML = `<div class="action">Oops</div><p class="error">${error.message}</p>`;
+      }
+    });
+  </script>
+</body>
+</html>

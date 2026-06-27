@@ -1,0 +1,42 @@
+{
+  "version": "0.2.0",
+  "game": "no-limit-holdem",
+  "tableSize": "6-max",
+  "stackDepthBb": 100,
+  "scenario": "raise-first-in",
+  "openSizeBb": {
+    "UTG": 2.5,
+    "HJ": 2.5,
+    "CO": 2.5,
+    "BTN": 2.5,
+    "SB": 3
+  },
+  "notes": [
+    "These are simplified, public-study inspired 6-max 100bb RFI ranges, not copied solver charts.",
+    "Use as a safer default when no exact precomputed GTO scenario exists. Add solver exports to data/gto-scenarios.json for exact GTO nodes."
+  ],
+  "sources": [
+    {
+      "name": "RangeConverter free poker charts",
+      "url": "https://rangeconverter.com/free-poker-charts",
+      "note": "Describes free NLHE cash preflop charts and simplified solver mixing."
+    },
+    {
+      "name": "PokerCoaching free preflop charts",
+      "url": "https://pokercoaching.com/preflop-charts/",
+      "note": "Describes free solver-generated GTO/exploitative preflop charts by position and stack depth."
+    },
+    {
+      "name": "AHTOOOXA/poker-charts",
+      "url": "https://github.com/AHTOOOXA/poker-charts",
+      "note": "MIT-licensed public project documenting interactive GTO preflop chart support."
+    }
+  ],
+  "ranges": {
+    "UTG": ["22+", "ATs+", "KTs+", "QTs+", "JTs", "T9s", "98s", "AQo+"],
+    "HJ": ["22+", "A9s+", "KTs+", "QTs+", "JTs", "T9s", "98s", "87s", "AJo+", "KQo"],
+    "CO": ["22+", "A2s+", "K9s+", "Q9s+", "J9s+", "T9s", "98s", "87s", "76s", "65s", "ATo+", "KJo+", "QJo"],
+    "BTN": ["22+", "A2s+", "K2s+", "Q5s+", "J7s+", "T7s+", "97s+", "86s+", "75s+", "64s+", "54s", "A2o+", "K9o+", "Q9o+", "J9o+", "T9o"],
+    "SB": ["22+", "A2s+", "K5s+", "Q8s+", "J8s+", "T8s+", "98s", "87s", "76s", "65s", "A8o+", "KTo+", "QTo+", "JTo"]
+  }
+}
