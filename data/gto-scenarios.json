@@ -1,0 +1,90 @@
+{
+  "version": "0.1.0",
+  "game": "no-limit-holdem",
+  "defaultAction": { "action": "check", "frequency": 1, "size": 0 },
+  "scenarios": [
+    {
+      "id": "cash-100bb-btn-open-aa",
+      "street": "preflop",
+      "position": "BTN",
+      "effectiveStackBb": 100,
+      "potBb": 1.5,
+      "toCallBb": 0,
+      "heroHand": "AA",
+      "line": "unopened",
+      "actions": [
+        { "action": "raise", "sizeBb": 2.5, "frequency": 1, "label": "Open 2.5bb" }
+      ]
+    },
+    {
+      "id": "cash-100bb-btn-open-aks",
+      "street": "preflop",
+      "position": "BTN",
+      "effectiveStackBb": 100,
+      "potBb": 1.5,
+      "toCallBb": 0,
+      "heroHand": "AKs",
+      "line": "unopened",
+      "actions": [
+        { "action": "raise", "sizeBb": 2.5, "frequency": 1, "label": "Open 2.5bb" }
+      ]
+    },
+    {
+      "id": "cash-100bb-bb-vs-btn-open-a5s",
+      "street": "preflop",
+      "position": "BB",
+      "effectiveStackBb": 100,
+      "potBb": 4,
+      "toCallBb": 1.5,
+      "heroHand": "A5s",
+      "line": "BTN_R2.5",
+      "actions": [
+        { "action": "raise", "sizeBb": 10, "frequency": 0.35, "label": "3-bet bluff" },
+        { "action": "call", "frequency": 0.65, "label": "Defend" }
+      ]
+    },
+    {
+      "id": "cash-100bb-bb-vs-btn-open-72o",
+      "street": "preflop",
+      "position": "BB",
+      "effectiveStackBb": 100,
+      "potBb": 4,
+      "toCallBb": 1.5,
+      "heroHand": "72o",
+      "line": "BTN_R2.5",
+      "actions": [
+        { "action": "fold", "frequency": 1, "label": "Release" }
+      ]
+    },
+    {
+      "id": "cash-100bb-srp-btn-k72r-ak",
+      "street": "flop",
+      "position": "BTN",
+      "effectiveStackBb": 97.5,
+      "potBb": 5.5,
+      "toCallBb": 0,
+      "heroHand": "AKo",
+      "board": "Ks7d2c",
+      "line": "BTN_R2.5_BB_CALL;BB_X",
+      "actions": [
+        { "action": "bet", "sizePot": 0.33, "frequency": 0.85, "label": "Small c-bet" },
+        { "action": "check", "frequency": 0.15, "label": "Protect check-back range" }
+      ]
+    },
+    {
+      "id": "cash-100bb-srp-bb-k72r-88-vs-cbet",
+      "street": "flop",
+      "position": "BB",
+      "effectiveStackBb": 97.5,
+      "potBb": 7.3,
+      "toCallBb": 1.8,
+      "heroHand": "88",
+      "board": "Ks7d2c",
+      "line": "BTN_R2.5_BB_CALL;BB_X_BTN_B33",
+      "actions": [
+        { "action": "call", "frequency": 0.72, "label": "Continue with showdown value" },
+        { "action": "fold", "frequency": 0.28, "label": "Mixed fold" }
+      ]
+    }
+  ]
+}
